@@ -14,12 +14,15 @@ public class FakeInputManager : MonoBehaviour
 	private Vector2 mLocation = new Vector2(49, -122);
 	public Vector2 Location { get { return mLocation; } }
 
-	private Vector2 mNewLocation = new Vector2();
-
 	// Distance to move per second
 	[Range(0.001f, 1.0f)]
 	[DefaultValue(0.01f)]
 	public float DeltaPerSecond;
+
+	private static readonly string FakeClientGUID = "FAKE";
+	private bool mFakeClientCreated = false;
+	// Closed to the default GPS location, but not exact
+	private Vector2 mFakeClientLocation = new Vector2(49.01f, -122.01f);
 
 	void Awake()
 	{
@@ -37,36 +40,84 @@ public class FakeInputManager : MonoBehaviour
 	void Update()
 	{
 		float delta = DeltaPerSecond * Time.deltaTime;
-
-		mNewLocation.Set(mLocation.x, mLocation.y);
+		Vector2 locationDelta = new Vector2();
 
 		if(Input.GetKey(KeyCode.DownArrow))
 		{
-			mNewLocation.y += delta;
+			locationDelta.y = delta;
 		}
 
 		if(Input.GetKey(KeyCode.UpArrow))
 		{
-			mNewLocation.y -= delta;
+			locationDelta.y = -delta;
 		}
 
 		if(Input.GetKey(KeyCode.RightArrow))
 		{
-			mNewLocation.x += delta;
+			locationDelta.x = delta;
 		}
 		
 		if(Input.GetKey(KeyCode.LeftArrow))
 		{
-			mNewLocation.x -= delta;
+			locationDelta.x = -delta;
 		}
 
-		if(!mLocation.Equals(mNewLocation))
+		if(!mFakeClientCreated && Input.GetKey(KeyCode.C))
 		{
-			mLocation.Set(mNewLocation.x, mNewLocation.y);
+			GameplayClientManager.Instance.CreateFake(FakeClientGUID);
+			mFakeClientCreated = true;
+		}
+		else if(mFakeClientCreated && Input.GetKey(KeyCode.X))
+		{
+			GameplayClientManager.Instance.DestroyFake(FakeClientGUID);
+			mFakeClientCreated = false;
+		}
+
+		if(!locationDelta.Equals(Vector2.zero))
+		{
+			mLocation = mLocation + locationDelta;
 			if(null != LocationChanged)
 			{
 				LocationChanged(mLocation);
 			}
+		}
+
+		// Update the real-fake location first!
+		if(mFakeClientCreated)
+		{
+			UpdateFakeClient();
+		}
+	}
+
+	void UpdateFakeClient()
+	{
+		float delta = DeltaPerSecond * Time.deltaTime;
+		Vector2 locationDelta = new Vector2();
+		
+		if(Input.GetKey(KeyCode.S))
+		{
+			locationDelta.y = delta;
+		}
+		
+		if(Input.GetKey(KeyCode.W))
+		{
+			locationDelta.y = -delta;
+		}
+
+		if(Input.GetKey(KeyCode.D))
+		{
+			locationDelta.x = delta;
+		}
+		
+		if(Input.GetKey(KeyCode.A))
+		{
+			locationDelta.x = -delta;
+		}
+
+		if(!locationDelta.Equals(Vector2.zero))
+		{
+			mFakeClientLocation  = mFakeClientLocation + locationDelta;
+			GameplayClientManager.Instance.FakeUpdateClient(FakeClientGUID, mFakeClientLocation);
 		}
 	}
 }
